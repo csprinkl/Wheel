@@ -7,6 +7,7 @@ class WeightedRandom:
     def __init__(self, items):
         self.items = items
         self.weights = [1] * len(items)
+        self.last_winner = None
 
     def load_weights(self, filename):
         try:
@@ -20,14 +21,21 @@ class WeightedRandom:
             json.dump(self.weights, file)
 
     def choose(self):
+        if self.last_winner is not None:
+            remaining_items = [item for item in self.items if item != self.last_winner]
+        else:
+            remaining_items = self.items
+
         total_weight = sum(self.weights)
         threshold = random.uniform(0, total_weight)
         weight_sum = 0
 
         for i, weight in enumerate(self.weights):
-            weight_sum += weight
-            if weight_sum >= threshold:
-                return self.items[i]
+            if self.items[i] in remaining_items:
+                weight_sum += weight
+                if weight_sum >= threshold:
+                    self.last_winner = self.items[i]
+                    return self.items[i]
 
     def adjust_weights(self, chosen_item):
         for i, item in enumerate(self.items):
@@ -57,10 +65,13 @@ class WheelOfNamesApp:
 
     def spin_wheel(self):
         winner = self.weighted_random.choose()
-        self.weighted_random.adjust_weights(winner)
-        self.winner_label.config(text="Winner: " + winner)
-        messagebox.showinfo("Winner", f"The winner is: {winner}")
-        self.weighted_random.save_weights(self.weights_filename)
+        if winner:
+            self.weighted_random.adjust_weights(winner)
+            self.winner_label.config(text="Winner: " + winner)
+            messagebox.showinfo("Winner", f"The winner is: {winner}")
+            self.weighted_random.save_weights(self.weights_filename)
+        else:
+            messagebox.showinfo("No Winner", "All names have been picked. Resetting for the next round.")
 
     def on_closing(self):
         self.weighted_random.save_weights(self.weights_filename)
